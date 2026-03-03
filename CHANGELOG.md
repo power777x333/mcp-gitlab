@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.7.0] - 2026-03-03
+
+### Features
+- feat: MR approval tools, startup logging, approval resources (#41) (c4bcf19)
+
+
 ## [0.6.11] - 2026-02-27
 
 ### Bug Fixes
