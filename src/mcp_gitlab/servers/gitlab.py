@@ -80,6 +80,50 @@ def _paginated(items: list) -> str:
     )
 
 
+_PIPELINE_KEYS = (
+    "id",
+    "iid",
+    "status",
+    "ref",
+    "sha",
+    "source",
+    "created_at",
+    "updated_at",
+    "started_at",
+    "finished_at",
+    "duration",
+    "queued_duration",
+    "failure_reason",
+    "web_url",
+    "name",
+)
+
+_JOB_KEYS = (
+    "id",
+    "name",
+    "stage",
+    "status",
+    "ref",
+    "created_at",
+    "started_at",
+    "finished_at",
+    "duration",
+    "queued_duration",
+    "allow_failure",
+    "failure_reason",
+    "web_url",
+    "when",
+)
+
+
+def _slim_pipeline(p: dict) -> dict:
+    return {k: p[k] for k in _PIPELINE_KEYS if k in p}
+
+
+def _slim_job(j: dict) -> dict:
+    return {k: j[k] for k in _JOB_KEYS if k in j}
+
+
 def _err(error: Exception) -> str:
     detail: dict[str, Any] = {"error": str(error)}
     from ..exceptions import (
@@ -1433,11 +1477,12 @@ async def gitlab_list_mr_pipelines(
     ctx: Context,
     project_id: Annotated[str, Field(description="Project ID or path", min_length=1)],
     mr_iid: Annotated[int, Field(description="Merge request IID")],
+    slim: Annotated[bool, Field(description="Strip verbose fields from response")] = True,
 ) -> str:
     """List pipelines associated with a merge request."""
     try:
         data = await _get_client(ctx).list_mr_pipelines(project_id, mr_iid)
-        return _paginated(data)
+        return _paginated([_slim_pipeline(p) for p in data] if slim else data)
     except Exception as e:
         return _err(e)
 
@@ -1518,8 +1563,9 @@ async def gitlab_list_pipelines(
     per_page: Annotated[
         int | None, Field(description="Results per page (1-100)", ge=1, le=100)
     ] = None,
+    slim: Annotated[bool, Field(description="Strip verbose fields from response")] = True,
 ) -> str:
-    """List pipelines for a project. Returns id, status, ref, source, created_at."""
+    """List pipelines for a project. Returns id, status, ref, source, timing, web_url."""
     try:
         params: dict[str, Any] = {}
         if ref:
@@ -1531,7 +1577,7 @@ async def gitlab_list_pipelines(
         if per_page:
             params["per_page"] = per_page
         data = await _get_client(ctx).list_pipelines(project_id, params or None)
-        return _paginated(data)
+        return _paginated([_slim_pipeline(p) for p in data] if slim else data)
     except Exception as e:
         return _err(e)
 
@@ -1545,14 +1591,21 @@ async def gitlab_get_pipeline(
     project_id: Annotated[str, Field(description="Project ID or path", min_length=1)],
     pipeline_id: Annotated[int, Field(description="Pipeline ID")],
     include_jobs: Annotated[bool, Field(description="Include pipeline jobs")] = False,
+    slim: Annotated[bool, Field(description="Strip verbose fields from response")] = True,
 ) -> str:
-    """Get pipeline details, optionally with jobs."""
+    """Get pipeline details, optionally with jobs.
+
+    Returns id, status, ref, timing, web_url.
+    Jobs include id, name, stage, status, timing, failure_reason, web_url.
+    """
     try:
         client = _get_client(ctx)
         pipeline = await client.get_pipeline(project_id, pipeline_id)
+        if slim:
+            pipeline = _slim_pipeline(pipeline)
         if include_jobs:
             jobs = await client.list_pipeline_jobs(project_id, pipeline_id)
-            pipeline["jobs"] = jobs
+            pipeline["jobs"] = [_slim_job(j) for j in jobs] if slim else jobs
         return _ok(pipeline)
     except Exception as e:
         return _err(e)
@@ -1575,7 +1628,7 @@ async def gitlab_create_pipeline(
     try:
         _check_write(ctx)
         data = await _get_client(ctx).create_pipeline(project_id, ref, variables)
-        return _ok(data)
+        return _ok(_slim_pipeline(data))
     except Exception as e:
         return _err(e)
 
@@ -1593,7 +1646,7 @@ async def gitlab_retry_pipeline(
     try:
         _check_write(ctx)
         data = await _get_client(ctx).retry_pipeline(project_id, pipeline_id)
-        return _ok(data)
+        return _ok(_slim_pipeline(data))
     except Exception as e:
         return _err(e)
 
@@ -1611,7 +1664,7 @@ async def gitlab_cancel_pipeline(
     try:
         _check_write(ctx)
         data = await _get_client(ctx).cancel_pipeline(project_id, pipeline_id)
-        return _ok(data)
+        return _ok(_slim_pipeline(data))
     except Exception as e:
         return _err(e)
 
@@ -1634,7 +1687,7 @@ async def gitlab_retry_job(
     try:
         _check_write(ctx)
         data = await _get_client(ctx).retry_job(project_id, job_id)
-        return _ok(data)
+        return _ok(_slim_job(data))
     except Exception as e:
         return _err(e)
 
@@ -1656,7 +1709,7 @@ async def gitlab_play_job(
     try:
         _check_write(ctx)
         data = await _get_client(ctx).play_job(project_id, job_id, variables)
-        return _ok(data)
+        return _ok(_slim_job(data))
     except Exception as e:
         return _err(e)
 
@@ -1674,7 +1727,7 @@ async def gitlab_cancel_job(
     try:
         _check_write(ctx)
         data = await _get_client(ctx).cancel_job(project_id, job_id)
-        return _ok(data)
+        return _ok(_slim_job(data))
     except Exception as e:
         return _err(e)
 

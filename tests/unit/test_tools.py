@@ -264,6 +264,101 @@ class TestPipelines:
         assert parsed["id"] == 100
         assert len(parsed["jobs"]) == 1
 
+    async def test_slim_pipeline_strips_extra_keys(self, tool_client):
+        client, router = tool_client
+        full_pipeline = {
+            "id": 200,
+            "status": "success",
+            "ref": "main",
+            "sha": "abc123",
+            "failure_reason": "config_error",
+            "web_url": "https://gitlab.example.com/pipelines/200",
+            "user": {"id": 1, "name": "dev", "avatar_url": "https://example.com/avatar.png"},
+            "detailed_status": {"icon": "status_success", "text": "passed"},
+            "coverage": "85.5",
+            "yaml_errors": None,
+            "before_sha": "000000",
+        }
+        full_job = {
+            "id": 10,
+            "name": "build",
+            "stage": "build",
+            "status": "success",
+            "ref": "main",
+            "failure_reason": "script_failure",
+            "web_url": "https://gitlab.example.com/jobs/10",
+            "runner": {"id": 1, "description": "shared-runner"},
+            "artifacts": [{"filename": "out.zip"}],
+            "commit": {"id": "abc123", "message": "fix"},
+            "pipeline": {"id": 200, "status": "success"},
+            "project": {"id": 123},
+        }
+        router.get("/projects/123/pipelines/200").mock(
+            return_value=Response(200, json=full_pipeline)
+        )
+        router.get("/projects/123/pipelines/200/jobs").mock(
+            return_value=Response(200, json=[full_job])
+        )
+        result = await client.call_tool(
+            "gitlab_get_pipeline",
+            {"project_id": "123", "pipeline_id": 200, "include_jobs": True},
+        )
+        parsed = _parse(result)
+        # Pipeline: extra keys stripped
+        assert "user" not in parsed
+        assert "detailed_status" not in parsed
+        assert "coverage" not in parsed
+        assert "yaml_errors" not in parsed
+        assert "before_sha" not in parsed
+        assert parsed["id"] == 200
+        assert parsed["failure_reason"] == "config_error"
+        assert parsed["web_url"] == "https://gitlab.example.com/pipelines/200"
+        # Job: extra keys stripped
+        job = parsed["jobs"][0]
+        assert "runner" not in job
+        assert "artifacts" not in job
+        assert "commit" not in job
+        assert "pipeline" not in job
+        assert "project" not in job
+        assert job["id"] == 10
+        assert job["name"] == "build"
+        assert job["failure_reason"] == "script_failure"
+        assert job["web_url"] == "https://gitlab.example.com/jobs/10"
+
+    async def test_slim_false_returns_full_response(self, tool_client):
+        client, router = tool_client
+        full_pipeline = {
+            "id": 300,
+            "status": "success",
+            "ref": "main",
+            "user": {"id": 1, "name": "dev"},
+            "detailed_status": {"icon": "status_success"},
+            "coverage": "90.0",
+        }
+        full_job = {
+            "id": 20,
+            "name": "test",
+            "status": "success",
+            "runner": {"id": 5, "description": "shared"},
+            "artifacts": [{"filename": "report.xml"}],
+        }
+        router.get("/projects/123/pipelines/300").mock(
+            return_value=Response(200, json=full_pipeline)
+        )
+        router.get("/projects/123/pipelines/300/jobs").mock(
+            return_value=Response(200, json=[full_job])
+        )
+        result = await client.call_tool(
+            "gitlab_get_pipeline",
+            {"project_id": "123", "pipeline_id": 300, "include_jobs": True, "slim": False},
+        )
+        parsed = _parse(result)
+        assert parsed["user"] == {"id": 1, "name": "dev"}
+        assert parsed["detailed_status"] == {"icon": "status_success"}
+        assert parsed["coverage"] == "90.0"
+        assert parsed["jobs"][0]["runner"] == {"id": 5, "description": "shared"}
+        assert parsed["jobs"][0]["artifacts"] == [{"filename": "report.xml"}]
+
 
 # ═══════════════════════════════════════════════════════
 # Issues
